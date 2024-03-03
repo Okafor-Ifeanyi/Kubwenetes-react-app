@@ -1,0 +1,11 @@
+apiVersion: v1
+
+kind: ConfigMap
+
+metadata:
+  name: fastapi-configmap
+
+data:
+  HNG_API_ORIGINS: "http://localhost:3000"
+  HNG_API_HOST: "0.0.0.0"
+  HNG_API_PORT: "8000"
