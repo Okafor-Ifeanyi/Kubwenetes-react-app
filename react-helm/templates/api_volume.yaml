@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: fastapi-pv
+spec:
+  capacity:
+    storage: 1Gi  # Specify the size of the volume
+  accessModes:
+    - ReadWriteOnce  # This mode allows the volume to be mounted as read-write by a single node
+  persistentVolumeReclaimPolicy: Retain  # Defines what happens to the PV after it is released from a claim
+  storageClassName: standard  # Use the appropriate storage class
+  hostPath:
+    path: /path/on/host 
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: fastapi-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi  # Match this with the PV size
+  storageClassName: standard  # Ensure this matches the storageClassName in your PV

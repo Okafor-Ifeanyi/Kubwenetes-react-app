@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+
+kind: Deployment
+
+metadata:
+  name: fastapi-deployment
+
+spec:
+  replicas: 1
+  
+  selector: 
+    matchLabels:
+      app: fastapi
+
+  template:
+    metadata:
+      name: fastapipod
+      labels:
+        app: fastapi
+
+    spec: 
+      containers:
+        - name: fastapi
+          image: 08129741530/fastapi-img:latest
+          env:
+            - name: HNG_API_ORIGINS
+              valueFrom:
+                configMapKeyRef:
+                  name: fastapi-configmap
+                  key: HNG_API_ORIGINS 
+            - name: HNG_API_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: fastapi-configmap
+                  key: HNG_API_HOST
+          volumeMounts:
+          - name: fastapi-storage  # This name links to the volume defined below
+            mountPath: /data  # The path inside the container where the volume is mounted
+      volumes:
+      - name: fastapi-storage
+        persistentVolumeClaim:
+          claimName: fastapi-pvc  # This must match the name of your PVC
+---
+apiVersion: v1
+
+kind: Service
+
+metadata: 
+  name: fastapi-service
+
+spec: 
+
+  type: NodePort
+
+  selector:
+    app: fastapi
+    
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
