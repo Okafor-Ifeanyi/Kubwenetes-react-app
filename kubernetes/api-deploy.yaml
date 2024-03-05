@@ -33,9 +33,13 @@ spec:
                 configMapKeyRef:
                   name: fastapi-configmap
                   key: HNG_API_HOST
+          ports:
+          - containerPort: 8000
+
           volumeMounts:
           - name: fastapi-storage  # This name links to the volume defined below
             mountPath: /data  # The path inside the container where the volume is mounted
+
       volumes:
       - name: fastapi-storage
         persistentVolumeClaim:

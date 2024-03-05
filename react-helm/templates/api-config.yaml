@@ -3,7 +3,7 @@ apiVersion: v1
 kind: ConfigMap
 
 metadata:
-  name: fastapi-configmap
+  name: fastapi-{{ .Release.Name }}-configmap
 
 data:
   HNG_API_ORIGINS: "http://localhost:3000"
