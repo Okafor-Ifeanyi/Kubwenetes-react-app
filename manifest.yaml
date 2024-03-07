@@ -1,0 +1,233 @@
+---
+# Source: react-helm/templates/react-config.yaml
+apiVersion: v1
+
+kind: Secret
+
+metadata:
+  name: react-dev-secrets
+
+type: Opaque
+
+data:
+  REACT_APP_LESSON_DAY: ZGF5MQ==
+---
+# Source: react-helm/templates/api-config.yaml
+apiVersion: v1
+
+kind: ConfigMap
+
+metadata:
+  name: fastapi-dev-configmap
+
+data:
+  HNG_API_ORIGINS: "http://localhost:3000"
+  HNG_API_HOST: "0.0.0.0"
+  HNG_API_PORT: "8000"
+---
+# Source: react-helm/templates/react-config.yaml
+apiVersion: v1
+
+kind: ConfigMap
+
+metadata:
+  name: react-dev-configmap
+
+data:
+  REACT_APP_API_URL: "http://127.0.0.1:8000"
+---
+# Source: react-helm/templates/api_volume.yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: fastapi-dev-pv
+spec:
+  capacity:
+    storage: 1Gi  # Specify the size of the volume
+  accessModes:
+    - ReadWriteOnce  # This mode allows the volume to be mounted as read-write by a single node
+  persistentVolumeReclaimPolicy: Retain  # Defines what happens to the PV after it is released from a claim   
+  storageClassName: standard  # Use the appropriate storage class
+  hostPath:
+    path: /path/on/host
+---
+# Source: react-helm/templates/api_volume.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: fastapi-dev-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi  # Match this with the PV size
+  storageClassName: standard  # Ensure this matches the storageClassName in your PV
+---
+# Source: react-helm/templates/api-deploy.yaml
+apiVersion: v1
+
+kind: Service
+
+metadata:
+  name: fastapi-dev-service
+
+spec:
+
+  type: NodePort
+
+  selector:
+    app: fastapi
+
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
+---
+# Source: react-helm/templates/react-deploy.yaml
+apiVersion: v1
+
+kind: Service
+
+metadata:
+  name: react-dev-service
+
+spec:
+  type: NodePort
+
+  selector:
+    app: react
+
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000
+      nodePort: 30100
+---
+# Source: react-helm/templates/api-deploy.yaml
+apiVersion: apps/v1
+
+kind: Deployment
+
+metadata:
+  name: fastapi-dev-deployment
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: fastapi
+
+  template:
+    metadata:
+      name: fastapipod
+      labels:
+        app: fastapi
+
+    spec:
+      containers:
+        - name: fastapi
+          image: 08129741530/fastapi-img
+          env:
+            - name: HNG_API_ORIGINS
+              valueFrom:
+                configMapKeyRef:
+                  name: fastapi-dev-configmap
+                  key: HNG_API_ORIGINS
+            - name: HNG_API_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: fastapi-dev-configmap
+                  key: HNG_API_HOST
+          ports:
+          - containerPort: 8000
+
+          volumeMounts:
+          - name: fastapi-storage  # This name links to the volume defined below
+            mountPath: /data  # The path inside the container where the volume is mounted
+
+      volumes:
+      - name: fastapi-storage
+        persistentVolumeClaim:
+          claimName: fastapi-dev-pvc  # This must match the name of your PVC
+---
+# Source: react-helm/templates/react-deploy.yaml
+apiVersion: apps/v1
+
+kind: Deployment
+
+metadata:
+  name: react-dev-deployment
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: react
+
+  template:
+    metadata:
+      labels:
+        app: react
+
+    spec:
+      containers:
+        - name: react
+          image: 08129741530/react-img
+          env:
+            - name: REACT_APP_API_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: react-dev-configmap
+                  key: REACT_APP_API_URL
+
+            - name: REACT_APP_LESSON_DAY
+              valueFrom:
+                secretKeyRef:
+                  name: react-dev-secrets
+                  key: REACT_APP_LESSON_DAY
+
+          ports:
+          - containerPort: 3000
+---
+# Source: react-helm/templates/react-ingress.yaml
+apiVersion: networking.k8s.io/v1
+
+kind: Ingress
+
+metadata:
+  name: react-ingress
+  namespace: react-helm
+
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/us-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+
+spec:
+
+  rules:
+
+  - http:
+
+      paths:
+
+      - pathType: ImplementationSpecific
+        path: /api/?(.*)
+        backend:
+          service:
+            name: fastapi-dev-service
+            port:
+              number: 8000
+
+      - pathType: ImplementationSpecific
+        path: /?(.*)
+
+        backend:
+          service:
+            name: react-dev-service
+
+            port:
+              number: 3000
